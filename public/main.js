@@ -10,6 +10,7 @@ async function fetchTemplate(listItems, url, domElem) {
 
 window.addEventListener('DOMContentLoaded', loadProducts);
 
+/* Seleccion de elementos HTML */
 const inputEmailMessage = document.querySelector('#emailMessage');
 const inputNombreMessage = document.querySelector('#nombreMessage');
 const inputApellidoMessage = document.querySelector('#apellidoMessage');
@@ -18,14 +19,15 @@ const inputAliasMessage = document.querySelector('#aliasMessage');
 const inputAvatarMessage = document.querySelector('#avatarMessage');
 const inputTextMessage = document.querySelector('#textMessage');
 const textAlert = document.querySelector('#alert');
-
 const textCompresion = document.querySelector('#compresionLabel');
 
 const btnSendMessage = document.querySelector('#sendMessage');
 const btnDeleteMessages = document.querySelector('#deleteMessages');
+
 btnSendMessage.addEventListener('click', sendMessage);
 btnDeleteMessages.addEventListener('click', deleteMessages);
 
+/* Defino los esquemas, que son los mismos con los que se normaliza */
 // Definimos un esquema de autor
 const schemaAuthor = new normalizr.schema.Entity('author', {}, { idAttribute: 'email' });
 // Definimos un esquema de mensaje
@@ -84,7 +86,13 @@ socket.on('mensajes', function (normalizedMensajes) {
   const lengthNormalizedMensajes = JSON.stringify(normalizedMensajes).length;
   const denormalizedMensajes = normalizr.denormalize(normalizedMensajes.result, schemaMensajes, normalizedMensajes.entities);
   const lengthDenormalizedMensajes = JSON.stringify(denormalizedMensajes).length;
-  textCompresion.innerText = `(Compresion: ${parseInt((lengthNormalizedMensajes / lengthDenormalizedMensajes) * 100)}%)`;
+  const porcentajeCompresion = parseInt((lengthNormalizedMensajes / lengthDenormalizedMensajes) * 100);
+  if (porcentajeCompresion <= 100) {
+    textCompresion.innerText = `(Compresion: ${porcentajeCompresion}%)`;
+  } else {
+    textCompresion.innerText = `(Compresion: N/A)`;
+  }
+
   const mensajes = denormalizedMensajes.mensajes;
   mensajes !== undefined && fetchTemplate(mensajes, '/templates/chat.hbs', '#chat');
 });

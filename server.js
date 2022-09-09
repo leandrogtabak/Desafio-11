@@ -5,6 +5,7 @@ import { Server as IOServer } from 'socket.io';
 import { urlJson, urlDb, urlMongo } from './DB/config.js';
 import { ContenedorMongoDb } from './contenedores/ContenedorMongoDb.js';
 import { ContenedorFirebase } from './contenedores/ContenedorFirebase.js';
+import { ContenedorArchivo } from './contenedores/ContenedorArchivo.js';
 import { Mensaje } from './models/mensaje.js';
 import { normalize, schema } from 'normalizr';
 import util from 'util';
@@ -16,52 +17,40 @@ function print(objeto) {
   });
 }
 
-const miContenedorMongoDB = new ContenedorMongoDb(urlMongo, Mensaje);
-// const miContenedorFirebase = new ContenedorFirebase(urlJson, urlDb, 'ecommerce');
-
-// const newMensaje = {
-//   author: {
-//     email: 'leandro@gmail.com',
-//     nombre: 'Leandro',
-//     apellido: 'Tabak',
-//     edad: '35',
-//     alias: 'Rulo',
-//     avatar: 'http://LeandroAvatar',
-//   },
-//   text: 'Sisi, creo que para entenderlo bien hay que leer con mucho detenimiento',
-//   fyh: `[${moment().format('DD/MM/YYYY HH:mm:ss')}]`,
-//   id: 1,
-// };
-
-//Guardar mensajes en Mongo
-// const saveMensajeMongoDB = async (mensaje) => {
-//   for (let i = 0; i < 1; i++) await miContenedorMongoDB.save(mensaje);
-// };
-// saveMensajeMongoDB(newMensaje);
-
-// //Guardar mensajes en Firebase
-// const saveMensajeFirebase = async (mensaje) => {
-//   miContenedorFirebase.save(mensaje);
-// };
-// saveMensajeFirebase(newMensaje);
+// const miContenedorMongoDB = new ContenedorMongoDb(urlMongo, Mensaje);   //probar mongo descomentando esto y usand en las funciones de abajo, a este contenedor
+// const miContenedorFirebase = new ContenedorFirebase(urlJson, urlDb, 'ecommerce'); //probar firebase descomentando esto y usand en las funciones de abajo, a este contenedor
+const miContenedorArchivo = new ContenedorArchivo('./mensajes.json');
 
 /* ESQUEMAS PARA NORMALIZER */
 
 // Definimos un esquema de autor
 const schemaAuthor = new schema.Entity('author', {}, { idAttribute: 'email' });
-
 // Definimos un esquema de mensaje
 const schemaMensaje = new schema.Entity('post', { author: schemaAuthor }, { idAttribute: 'id' });
-
 // Definimos un esquema de posts
 const schemaMensajes = new schema.Entity('posts', { mensajes: [schemaMensaje] }, { idAttribute: 'id' });
 
-function createRandomProduct() {
+async function createRandomProduct() {
   return {
     nombre: faker.commerce.product(),
     precio: faker.commerce.price(),
     fotoUrl: faker.image.avatar(),
   };
+}
+
+async function getAndEmit(container, id) {
+  const arrayMensajes = await container.getAll();
+  const miObjetoMensajes = { id: id, mensajes: arrayMensajes };
+  const normalizedData = normalize(miObjetoMensajes, schemaMensajes);
+  io.sockets.emit(id, normalizedData);
+}
+async function saveByContainer(container, message) {
+  const mensajes = await container.getAll();
+  let id = mensajes && mensajes.length !== 0 ? mensajes[mensajes.length - 1].id + 1 : 1;
+  await container.save({ ...message, id: id });
+}
+async function deleteByContainer(container) {
+  await container.deleteAll();
 }
 
 const app = express();
@@ -79,36 +68,25 @@ httpServer.listen(PORT, function () {
   console.log('Servidor corriendo en http://localhost:8080');
 });
 
-app.get('/api/productos-test', (req, res) => {
+app.get('/api/productos-test', async (req, res) => {
   const qtyProducts = parseInt(req.query.cant) || 5;
   const fakeProducts = [];
   let id = 1;
-  for (let i = 0; i < qtyProducts; i++) fakeProducts.push({ id: id++, ...createRandomProduct() });
+  for (let i = 0; i < qtyProducts; i++) fakeProducts.push({ id: id++, ...(await createRandomProduct()) });
   res.status(200).send(fakeProducts);
 });
 
 io.on('connection', async (socket) => {
   console.log('Un cliente se ha conectado');
-
-  const arrayMensajes = await miContenedorMongoDB.getAll();
-  const miObjetoMensajes = { id: 'mensajes', mensajes: arrayMensajes };
-  const normalizedData = normalize(miObjetoMensajes, schemaMensajes);
-  io.sockets.emit('mensajes', normalizedData);
+  await getAndEmit(miContenedorArchivo, 'mensajes');
 
   socket.on('new-message', async (newMessage) => {
-    const mensajes = await miContenedorMongoDB.getAll();
-    let id = mensajes[mensajes.length - 1] ? mensajes[mensajes.length - 1].id + 1 : 1;
-    await miContenedorMongoDB.save({ ...newMessage, id: id });
-
-    const arrayMensajes = await miContenedorMongoDB.getAll();
-    const miObjetoMensajes = { id: 'mensajes', mensajes: arrayMensajes };
-    const normalizedData = normalize(miObjetoMensajes, schemaMensajes);
-    io.sockets.emit('mensajes', normalizedData);
+    await saveByContainer(miContenedorArchivo, newMessage);
+    await getAndEmit(miContenedorArchivo, 'mensajes');
   });
   socket.on('delete-messages', async () => {
-    await miContenedorMongoDB.deleteAll();
-    const mensajesActualizados = await miContenedorMongoDB.getAll();
-    io.sockets.emit('mensajes', mensajesActualizados);
+    await deleteByContainer(miContenedorArchivo);
+    await getAndEmit(miContenedorArchivo, 'mensajes');
   });
 });
 

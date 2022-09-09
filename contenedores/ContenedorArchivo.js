@@ -1,5 +1,4 @@
-const fs = require('fs');
-
+import fs from 'fs';
 export class ContenedorArchivo {
   constructor(myFile) {
     this.myFile = myFile;

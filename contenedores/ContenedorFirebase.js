@@ -33,8 +33,7 @@ export class ContenedorFirebase {
       querySnapshot.forEach((doc) => {
         allItems.push(doc.data());
       });
-      console.log(allItems);
-      return allItems;
+      return allItems.sort((a, b) => a.id - b.id);
     } catch (err) {
       console.log(err);
     }
