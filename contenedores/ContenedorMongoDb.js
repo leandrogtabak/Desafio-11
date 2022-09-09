@@ -23,7 +23,7 @@ export class ContenedorMongoDb {
   }
   async getAll() {
     try {
-      const items = await this.model.find();
+      const items = await this.model.find().lean();
       return items;
     } catch (err) {
       console.log(err);

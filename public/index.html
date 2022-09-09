@@ -7,6 +7,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/normalizr@3.6.1/dist/normalizr.browser.min.js"></script>
 
 </head>
 
@@ -19,9 +20,20 @@
 
 
             <div class='container bg-light p-4 my-2 mx-auto'>
-                <h1 class='text-primary mb-5'>Centro de mensajes</h1>
-                <input placeholder="Ingresa tu dirección de email..." type='email' class='form-control' id='nameMessage'
-                    style="max-width:300px;" />
+                <h1 class='text-primary'>Centro de mensajes</h1>
+                <h1 class='text-primary mb-5' id="compresionLabel"></h1>
+                <input placeholder="Ingresa tu dirección de email..." type='email' class='form-control'
+                    id='emailMessage' style="max-width:300px;margin-bottom: 12px;" />
+                <input placeholder="Ingresa tu nombre..." type='text' class='form-control' id='nombreMessage'
+                    style="max-width:300px;margin-bottom: 12px;" />
+                <input placeholder="Ingresa tu apellido..." type='text' class='form-control' id='apellidoMessage'
+                    style="max-width:300px;margin-bottom: 12px;" />
+                <input placeholder="Ingresa tu edad..." type='text' class='form-control' id='edadMessage'
+                    style="max-width:300px;margin-bottom: 12px;" />
+                <input placeholder="Ingresa tu alias..." type='text' class='form-control' id='aliasMessage'
+                    style="max-width:300px;margin-bottom: 12px;" />
+                <input placeholder="Ingresa el url de tu avatar..." type='text' class='form-control' id='avatarMessage'
+                    style="max-width:300px;margin-bottom: 12px;" />
                 <hr />
 
 
@@ -29,9 +41,11 @@
 
 
                 <div class="d-flex justify-content-start">
-                    <input placeholder="Envía un mensaje..." type='text' class='form-control' id='message'
+
+                    <input placeholder="Envía un mensaje..." type='text' class='form-control' id='textMessage'
                         style="max-width:200px;" />
                     <button id='sendMessage' class='btn btn-success ms-3'>Enviar!</button>
+                    <button id='deleteMessages' class='btn btn-danger ms-3'>Borrar mensajes</button>
                 </div>
                 <p class="fst-italic text-danger mt-2" id="alert"></p>
 

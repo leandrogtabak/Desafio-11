@@ -10,15 +10,28 @@ async function fetchTemplate(listItems, url, domElem) {
 
 window.addEventListener('DOMContentLoaded', loadProducts);
 
-const inputTitle = document.querySelector('#title');
-const inputPrice = document.querySelector('#price');
-const inputThumbail = document.querySelector('#thumbail');
-
-const inputNameMessage = document.querySelector('#nameMessage');
-const inputMessage = document.querySelector('#message');
+const inputEmailMessage = document.querySelector('#emailMessage');
+const inputNombreMessage = document.querySelector('#nombreMessage');
+const inputApellidoMessage = document.querySelector('#apellidoMessage');
+const inputEdadMessage = document.querySelector('#edadMessage');
+const inputAliasMessage = document.querySelector('#aliasMessage');
+const inputAvatarMessage = document.querySelector('#avatarMessage');
+const inputTextMessage = document.querySelector('#textMessage');
 const textAlert = document.querySelector('#alert');
+
+const textCompresion = document.querySelector('#compresionLabel');
+
 const btnSendMessage = document.querySelector('#sendMessage');
+const btnDeleteMessages = document.querySelector('#deleteMessages');
 btnSendMessage.addEventListener('click', sendMessage);
+btnDeleteMessages.addEventListener('click', deleteMessages);
+
+// Definimos un esquema de autor
+const schemaAuthor = new normalizr.schema.Entity('author', {}, { idAttribute: 'email' });
+// Definimos un esquema de mensaje
+const schemaMensaje = new normalizr.schema.Entity('post', { author: schemaAuthor }, { idAttribute: 'id' });
+// Definimos un esquema de posts
+const schemaMensajes = new normalizr.schema.Entity('posts', { mensajes: [schemaMensaje] }, { idAttribute: 'id' });
 
 function validateEmail(mail) {
   if (/^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(mail)) {
@@ -27,18 +40,28 @@ function validateEmail(mail) {
   return false;
 }
 
+function deleteMessages() {
+  socket.emit('delete-messages');
+}
+
 function sendMessage() {
-  const date = moment().format('DD/MM/YYYY HH:mm:ss');
-  if (validateEmail(inputNameMessage.value)) {
-    const newMessage = {
-      name: inputNameMessage.value,
-      message: inputMessage.value,
-      date: `[${date}]`,
+  const fyh = moment().format('DD/MM/YYYY HH:mm:ss');
+  if (validateEmail(inputEmailMessage.value)) {
+    const newMensaje = {
+      author: {
+        email: inputEmailMessage.value,
+        nombre: inputNombreMessage.value,
+        apellido: inputApellidoMessage.value,
+        edad: inputEdadMessage.value,
+        alias: inputAliasMessage.value,
+        avatar: inputAvatarMessage.value,
+      },
+      text: inputTextMessage.value,
+      fyh: `[${fyh}]`,
     };
+    socket.emit('new-message', newMensaje);
 
-    socket.emit('new-message', newMessage);
-
-    inputMessage.value = '';
+    inputTextMessage.value = '';
     textAlert.innerText = '';
   } else {
     textAlert.innerText = 'Por favor, ingresa una dirección de email válida';
@@ -57,6 +80,11 @@ function loadProducts() {
     });
 }
 
-socket.on('mensajes', function (mensajes) {
-  fetchTemplate(mensajes, '/templates/chat.hbs', '#chat');
+socket.on('mensajes', function (normalizedMensajes) {
+  const lengthNormalizedMensajes = JSON.stringify(normalizedMensajes).length;
+  const denormalizedMensajes = normalizr.denormalize(normalizedMensajes.result, schemaMensajes, normalizedMensajes.entities);
+  const lengthDenormalizedMensajes = JSON.stringify(denormalizedMensajes).length;
+  textCompresion.innerText = `(Compresion: ${parseInt((lengthNormalizedMensajes / lengthDenormalizedMensajes) * 100)}%)`;
+  const mensajes = denormalizedMensajes.mensajes;
+  mensajes !== undefined && fetchTemplate(mensajes, '/templates/chat.hbs', '#chat');
 });
